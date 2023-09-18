@@ -1,0 +1,51 @@
+The ProDy developer requested that I use prody from github, as that should work with the large system. To do this,
+
+1) forked prody on github into my account
+
+2) cloned prody on my terminal with
+git clone https://github.com/prody/ProDy.git
+
+3) exported prody into my python path with
+export PYTHONPATH=$PYTHONPATH:$/net/gpfs-amarolab/cseitz/from_jam/projects/phage/2_simulation_files/prody/ProDy
+
+4) set up prody with
+make build
+
+5) allowed for the running of prody applications anywhere with
+export PATH=$PATH:$/net/gpfs-amarolab/cseitz/from_jam/projects/phage/2_simulation_files/prody/ProDy/scripts
+
+6) this still does not work in jupyter notebooks, but this is likely because it finds the conda installed prody which is not updated
+
+7) which prody
+/software/repo/python/anaconda3/bin/prody
+
+8) Removed the conda prody
+conda remove prody
+
+9) which prody
+/software/repo/python/anaconda3/bin/prody
+
+10) rm /software/repo/python/anaconda3/bin/prody
+
+11) jpnotebooks
+
+12) export PYTHONPATH=/net/gpfs-amarolab/cseitz/from_jam/projects/phage/2_simulation_files/prody/ProDy$PYTHONPATH
+this is needed to show python where to find the prody executable, and must be run before loading prody
+
+13) asked Bryan to remove prody from python/site-packages because that is where jupyter notebook was finding it
+
+14) reinstalled with conda
+
+15) need to get jupyter notebook to find the python path of the prody module, maybe by adding it to the python path? unclear
+conda list shows the prody module at /home/cseitz/miniconda3/bin
+but jupyter notebook and python3 show the sys.path as at /software/repo/python/anaconda3/lib/python3.7/site-packages
+
+16) Ran export PYTHONPATH=$PYTHONPATH:$/home/cseitz/miniconda3/bin to add the conda packages to the python path
+
+17) changed the path direction in the jupyter notebook so that it pip installs to only the user in the notebook
+
+18) created a new conda environment with conda create -n prody prody. Opening the notebook in this conda environment showed James' latest software updates!
+
+19) when trying to run the ANM, it gave me this error:
+RuntimeError: module compiled against API version 0xe but this version of numpy is 0xd
+Clearly, my version of numpy is not as recent as the prody version. So outside of jupyter notebook but still in the conda environment, I ran conda update numpy. This allowed the ANM to work!!

@@ -1,0 +1,238 @@
+The FLEXOME suite is written by Dr. Stephen Wells at the University of Bath, which retains all rights.
+
+Source code for the FLEXOME suite resides in the CPP folder. This folder also includes compilation scripts. Run compileObjects.sh to generate binaries and then run compileExecutables.sh to generate executable files:
+$ bash compileObjects.sh
+$ bash compileExecutables.sh
+
+The executables can then be placed in a suitable locatione such as the user's ~/bin directory.
+
+The compilation scripts are written for the g++ compiler: to use a different C++ compiler, edit the COMPILER line at the head of each script.
+
+Usage information for each executable is generated if they are run without command line arguments; these usages are collated for reference in the USAGE.txt file.
+
+Useful scripts are provided in the SCRIPTS folder. These include loopRCD.sh, which automates running rigid cluster decompositions at multiple energy cutoffs, and loopFLEX.sh, which automates running flexible motion simulations in multiple directions. The Pymol script cleanProtein.pml is intended to remove water molecules and alternate side chain configurations from a protein structure prior to hydrogenation and analysis.
+
+This guide covers the following topics:
+I    Finding burial distance and solvent exposure
+II   Finding covalent and noncovalent bonds
+III  Finding the Rigid Cluster Decomposition (RCD) of a protein structure, using an energy cutoff to select polar interactions.
+IV   Finding RCDs at multiple energy cutoffs.
+V    Extracting nodes for an elastic network model
+VI   Obtaining normal modes from an elastic network model
+VII  Exploring the mobility of a structure using a normal mode bias direction.
+VIII Exploring mobility in multiple bias directions.
+
+
+This guide assumes an all-atom protein structure as input, with hydrogen atoms added (e.g. using MolProbity or a similar utility), saved in a single PDB-format file. Structures of more than 99,999 atoms, saved in multiple PDB files, can be studied using the "expert" system, discussed in another guide. The placeholder name for the input structure file will be "prot.pdb". In general the structure should not include explicit water molecules, and should only include hetero atoms that the user specifically wishes included in the analysis (e.g. a bound ligand or a glycosylated residue).
+
+Lines beginning with a dollar-sign prompt:
+$ ls
+represent commands to be typed into the terminal. We assume a Linux-like environment with the Bash shell.
+
+
+TOPIC I: Burial and solvent exposure.
+
+(This topic is optional; if you are not interested in finding buried or exposed residues, proceed to II).
+
+The pdb2burial utility analyses the heavy-atom (non-hydrogen) geometry of the input structure and identifies solvent-exposed atoms. An atom is solvent exposed if it is possible to place a "probe" molecule representing solvent in contact with the atom and not overlapping any other atom. Once solvent-exposed atoms have been identified, every other atom is given a burian distance equal to its distance from the nearest solvent-exposed atom. Hydrogen atoms are ignored throughout.
+
+Running pdb2burial on the structure:
+$ pdb2burial prot.pdb
+
+generates a new file "prot.burial.pdb" in which the b-factor column is overwritten with burial distances. Exposed atoms are given a burial distance of 0.01 Angstroms. If this file is viewed in Pymol, the "buriedColours.pml" script in the SCRIPTS folder will colour nonhydrogen atoms according to their burial distance.
+
+Heavy atom radii are assigned in the subroutine PDBThing::assignBurialRadii() in the source file PDBObject.cpp. Radii are as follows: carbon 2.0, nitrogen 1.5, oxygen 1.6, sulphur 1.9, phosphorus 1.8, all others 1.5 Angstroms. These radii are used only for burial calculation and are not the steric radii used for mobility simulations.
+
+By default the probe radius is 1.4 Angstroms, representing a water molecule. A different probe radius can be given as a second argument when running pdb2burial, thus:
+$pdb2burial prot.pdb 1.6
+
+Exercise Ia: run pdb2burial on the lyso.pdb example structure and compare your result to the worked example.
+Exercise Ib: run with a larger probe radius. How does this affect your result?
+
+
+TOPIC II: Finding bonds.
+
+Bonds must be found before rigidity analysis can be carried out. The pdb2bonds utility analyses the all-atom geometry of the input structure to identify covalent, hydrophobic and polar bonding interactions. Bonds are identified based on distance criteria. Polar interactions (hydrogen bonds and salt bridges) are assigned an effective energy in kcal/mol based on the donor-acceptor distance and the donor-hydrogen-acceptor(-base) angles. Effective energies range from -0 to -10 kcal/mol for the strongest salt bridge interactions. CONECT records in the input file are read and used as covalent bonds.
+
+Running pdb2bonds on the structure:
+$ pdb2bonds prot.pdb
+
+generates output files "cov.bonds", "phobic.bonds" and "polar.bonds" as well as an atom listing "prot.map".
+
+The .map listing maps the internal atom IDs used by FLEXOME to the atom entries and serial numbers in the input pdb file. FLEXOME IDs count upwards from 1 sequentially whereas serial numbers need not start at 1 and may have gaps; additioanlly, TER cards in a pdb file have their own serial number but are not atoms.
+
+The cov.bonds file has one line for every covalent bond in the structure, each line having the following format:
+ id1 id2 bars :serial1:serial2:
+Here id1 and id2 are the internal IDs of two atoms; "bars" is a number of constraints, being 5 for a rotatable bond with a free dihedral angle and 6 for a locked dihedral angle such as the C-N bond in a peptide backbone. id1, id2 and bars are read by other FLEXOME utilities. The colon-delimited entries with the serial numbers from the PDB file are not read by FLEXOME and are provided so that the user can easily search for bonds given an atom's serial number from the input PDB file.
+
+The phobic.bonds file includes a line for every hydrophobic tether identified in the structure. Tethers can be formed between two nonpolar carbon or sulphur atoms. These are assigned radii of 1.7 (carbon) or 1.8 (sulphur) Angstroms, and a tether is assigned if two atoms lie within the sum of their radii plus a margin of 0.5 Angstroms. The format of this file is identical to that of the cov.bonds file, but the bars value for hydrophobic tethers is 2.
+
+The polar.bonds file includes a line for every polar interaction identified in the structure. The list is sorted by energy, from weakest to strongest. The format of each line is as follows:
+ id1 id2 bars energy :serial1:serial2:
+The energy is used by other FLEXOME utilities to include or exclude the interaction based on a user-defined cutoff value. By default, pdb2bonds reports every interaction with a strength of -0.1 kcal/mol or better. This can be adjusted using an optional second argument: for example,
+$ pdb2bonds prot.pdb -1.0
+will report only bonds stronger than -1.0 kcal/mol. In general there is no reason to alter the default. The bar count for polar interactions is 5.
+
+Exercise IIa: obtain bond listings for the lyso.pdb example structure.
+
+Note: the .bonds files generated in this step are vital input both for rigidity analysis (topics III,IV) and geometric simulation of flexible motion (topics VII, VIII). Since they are plain text files they are also editable if desired. Thus, if the distance criteria generate e.g. a hydrophobic tether which seems biologically inappropriate, it can be edited out by removing the appropriate line from the bond listings.
+
+
+TOPIC III: Rigid Cluster Decomposition
+
+The pdbRCD utility identifies rigid and flexible regions in the protein structure, using the pebble game algorithm. This is an integer algorithm in which the network of bonding constraints forms a directed graph, and the degrees of freedom of the atoms- the "pebbles"- are "played" to cover lines of the graph. The graph can then be decomposed into rigid regions, where constraints outnumber degrees of freedom, and flexible regions with excess DOF. Atoms of the structure are then assigned a Rigid Cluster identifier, where RC1 is the largest rigid cluster.
+
+This utility assumes that the files cov.bonds, phobic.bonds and polar.bonds are present and will fail if they are not.
+
+The user should provide an energy cutoff (a number between 0 and -10). Polar interactions with energies below this cutoff are included in the analysis; weaker interactions are not included. It is generally found that protein structures are largely rigid at small cutoffs (0 to -0.5 kcal/mol) and almost entirely flexible at cutoffs around -5 kcal/mol or lower. So for example:
+$ pdbRCD prot.pdb -1.0
+will carry out a decomposition including polar interactions stronger than -1.0 kcal/mol.
+
+This utility generates a prot.rcd.pdb file as output. This is a structure identical to the input, where the b-factor column has been overwritten with rigid cluster information. Members of Rigid Cluster 1 (the largest rigid cluster) are assigned a b-factor of 0.01, members of RC2 are assigned 0.02, and so on. Additionally, a rcd.txt file is produced which lists every atom's FLEXOME ID and the rigid cluster it belongs to.
+
+The utility generates two Pymol scripts, phobic.pml and polar.pml. If the .rcd.pdb file is loaded in Pymol, running these pml scripts will visualise the phobic and polar interactions as lines between atoms, using Pymol distance objects. The polar.pml script includes only those interactions stronger than the cutoff.
+
+The colourFlexRCDs.pml script in the SCRIPTS folder will highlight and colour-code the twenty largest rigid clusters using a b-factor selection.
+
+Exercise IIIa: run a rigid cluster decomposition of lyso.pdb at a cutoff of your choice, e.g. -1.0 or -2.0. Visualise your results.
+
+
+TOPIC IV: RCDs at multiple energy cutoffs.
+
+The main use of rigidity analysis is to obtain RCDs at several different cutoffs so as to observe the process of loss of rigidity ("rigidity dilution") as weaker polar interactions are removed from the constraint network. This provides information on the relative rigidity/stability of different portions of the structure. Repeatedly calling pdbRCD with different cutoffs would be tedious and inconvenient. It is more efficient to adopt a scripted approach which automates the use of different cutoffs.
+
+The loopRCD.sh shell script in the FLEXOME/SCRIPTS directory is written for this purpose. At the top of the script a variable "cutlist" is defined which contains a series of numbers to be used as cutoffs. For example, if you edit the file so that it includes the line:
+cutlist="1.0 2.0 3.0"
+then rigidity analysis will be carried out at cutoffs of -1.0, -2.0 and -3.0 kcal/mol.
+
+The script assumes the existence of the bond files required for pdbRCD.
+
+The name of the structure file is provided as a command line argument to the script, thus:
+$ bash loopRCD.sh prot.pdb
+
+At every iteration of the loop, the script saves a copy of the .rcd.pdb file and the polar.pml file obtained with a given cutoff. The copies are labelled with "_cut" and the cutoff value. Thus, if the cutlist variable includes the value 1.0, then files "prot_cut1.0.pdb" and "polar_cut1.0.pdb" are saved. Since the phobic.pml file does not depend on the energy cutoff, it is not duplicated for different values.
+
+Exercise IVa: use the loopRCD.sh script to obtain RCDs of lysozyme at a series of cutoffs of your choice.
+
+
+TOPIC V: extracting nodes for elastic network modelling.
+
+A coarse-grained elastic network model of a protein can conveniently be formed on a one site per residue basis. The pdb2nodes utility takes the name of a pdb file as input, thus:
+$ pdb2nodes prot.pdb
+and produces an output file nodes.pdb containing one site per residue.
+
+If a residue is a standard amino acid, its alpha carbon (" CA ") site is taken as the node position. If the residue is not a standard amino acid, the centroid of all the atom positions in the residue is the node position and is reported as a fictitious CA atom.
+
+Exercise Va: extract nodes from lyso.pdb and visualise this coarse model of the structure.
+
+
+TOPIC VI: obtaining normal modes.
+
+Given the geometry saved in nodes.pdb, the process of elastic network modelling is as followed. Springs can be assigned between every pair of nodes that lie within a chosen cutoff distance; this should be chosen so that every node interacts with several of its nearest neighbours. This allows the calculation of a Hessian matrix H : an M by M matrix where M = 3N, N being the number of nodes in the model. This matrix represents the interactions between nodes. An eigenvector of this matrix is a vector v for which Hv = lambda*v ; v is then a list of directions and magnitudes of motion for every node, and lambda, its eigenvalue, is effectively a frequency. The eigenvectors of H are termed the normal modes of the structure.
+
+Modes of motion for which lambda is relatively low represent "easy" directions of motion for the structure to explore. Conceptually a low-frequency normal mode is comparable to one of the natural frequencies of a plucked string.
+
+As the entire structure represents an orientable body in space, it will have six modes with effectively zero frequency, made up of the three translational and three rotational degrees of freedom of a rigid body. Our interest is in obtaining the lowest-frequency non-trivial modes of motion - the modes with next lowest frequencies after the trivial rigid body motions have been accounted for.
+
+The Hessian matrix H has several useful mathematical properties which make obtaining its low-frequency eigenvectors and eigenvalues easier: it is a symmetric matrix containing real values, and, assuming that the interaction cutoff distance is significantly less than the size of the protein, it is a sparse matrix, in which the majority of entries are zero. Additionally, we can give it the property of being positive definite- that is, we can ensure that all of its eigenvalues are positive non-zero real numbers- by assigning a very weak "onsite" spring tethering each node to its own starting position. This onsite spring guarantees that the rigid body motions, rather than having exactly zero frequency, have a small positive eigenvalue.
+
+A real symmetric positive definite matrix is susceptible to a convenient mathematical transformation, the diagonal Cholesky decomposition, which represents H as the product of a lower-triangular matrix L and an upper-triangular matrix U. This representation allows us to obtain the eigenvectors of H with the lowest values of lambda - the lowest-frequency normal modes - by a linear algebra process of inverse iteration. In this process, a randomly generated starting vector is repeatedly multiplied by H in such a way that the eigenvector with the smallest value of lambda comes to dominate the product. Once an eigenvector is found, the process is repeated with a vector that is made orthogonal to the known eigenvector; the inverse iteration then leads to the eigenvector with the next smallest eigenvalue.
+
+The nodes2modes utility reads from the nodes.pdb file generated by pdb2nodes and obtains a user-specified number of low-frequency nontrivial modes. By default the elastic network is generated with an interaction range of 10 Angstroms, an intersite spring constant of 1 and an onsite spring constant of 1e-10. The user can provide alternative values as optional arguments when calling the utility. Thus:
+$ nodes2modes 10
+will find ten low-frequency nontrivial modes with the default values, whereas:
+$ nodes2modes 10 12 
+finds ten modes using an interaction distance of 12 Angstroms.
+
+The specific steps carried out by nodes2modes are to set up the Hessian matrix; build the six rigid-body modes of the structure analytically; apply Cholesky decomposition to the Hessian to obtain it in LU form; obtain the requested number of nontrivial modes by inverse iteration; and report the results. The inverse iteration for each mode continues until its eigenvalue is converged to better than 1e-10 to ensure accuracy.
+
+The utility outputs two files. The net.sdijf file is a representation of the Hessian as a sparse matrix, with each line of the file being a row index, a column index, and a nonzero value; the zero entries are not explicitly given. The user need not in general examine this file further but it is made available for more detailed mathematical analysis if desired. The normal modes are reported in the net.eigenfacs file. Each entry in this file has a header reading " VECTOR n VALUE f" where n is the mode index and f is its eigenvalue; then a spacer line of dashes; than the mode itself in the form of a 3-D Cartesian vector for each node.
+
+Modes 1 to 6 in net.eigenfacs are the trivial rigid-body motions. Modes 7 upwards are the nontrivial modes of interest. Thus if 10 modes are requested, net.eigenfacs will contain modes 1 to 16. Mode 7 is the lowest-frequency nontrivial mode.
+
+An additional utility, splitModes, is provided to help make use of the mode information. This utility reads from nodes.pdb and net.eigenfacs and reports every nontrivial mode as two files. A file modenn.bias (nn=07,08 etc) contains the vectors for each node in a form that will be used to direct explorations of flexible motion. A file modenn.pdb contains a linear representation of the mode for easy visualisation in the form of a multi-model PDB file. The file contains five models, of which the middle is identical to nodes.pdb, while models 1-2 and 4-5 are linear projections along the mode vector. These modenn.pdb files can be examined to identify motions of potential interest. Simply run:
+$ splitModes
+in the directory containing nodes.pdb and net.eigenfacs.
+
+It is advisable to carry out the normal mode analysis in its own folder so that it will be easy to find the .bias files when needed.
+
+Exercise VIa: making a folder called "Modes" to work in, carry out a normal mode analysis on the nodes.pdb file obtained from your lysozyme structure, using default values and obtaining ten modes. Compare your results to those in the LysozymeExample/Modes directory.
+Exercise VIb: create another folder named "Modes20" and there carry out another analysis, using an interaction range of 20 Angstroms. Use the modenn.pdb files to compare your results to those obtained with the default range.
+
+
+TOPIC VII: Geometric simulation of motion along a bias direction.
+
+The flexible motion of the protein structure when "pushed" along a low-frequency normal mode direction can be explored using geometric simulation. In this approach, the local bonding geometry of the structure is represented by a set of templates. A template is built over each rigid cluster identified by rigidity analysis, using the geometry of the input structure. Templates extend to overlap each other across rotatable bonds. 
+
+Harmonic constraints link each atom to its site on one or more templates. Constraints also apply to atoms involved in a noncovalent interaction between two different rigid clusters, and likewise to atoms involved in a steric clash between two different rigid clusters. Radii are assigned to atoms for contact detection based on Bondi radii in the PDBObject::assignContactRadii() subroutine, as follows:
+Carbon 1.7, Sulphur 1.8, Nitrogen 1.55, Oxygen 1.52, Hydrogen 1.0, Phosphorus 1.8, all others 1.5 Angstroms.
+
+The "outer loop" of the geometric simulation approach is as follows:
+Displace atoms along bias direction;
+Restore geometry (inner loop);
+Repeat until end.
+The end point is when either a requested number of steps has been carried out, or the geometry can no longer be restored to within a tolerance.
+
+The "inner loop" of the geometric simulation approach is as follows:
+Fit the templates, as rigid bodies, to the geometry of the atoms;
+Relax the atomic positions based on the atom/template constraints, other noncovalent constraints, and steric clashes.
+Repeat until end.
+The end point is when either a maximum number of fitting cycles (defaulting to 100) has been carried out, or when the geometry mismatch has been reduced to less than a tolerance. The geometry mismatch is the worst displacement of an atom from its corresponding site on a template. The fitting tolerance is by default 0.1 Angstroms but can be adjusted by the user to cope with e.g. poor steric quality in starting geometry.
+
+The number of fitting cycles taken by the inner loop, and the magnitude of the geometry mismatch at the end of fitting, are reported to the screen at each iteration of the outer loop. Structures from the trajectory of geometric simulation are saved as .pdb files with a user-specified frequency
+
+The pdbMobility utility carries out geometric simulation and should be run in a directory containing the input structure, the three bonding files (covalent, phobic and polar), and the bias vector in a file named "mode.bias"; this should be a copy of a modenn.bias file chosen from those generated by normal mode analysis. Recall that the bias file lists a 3D vector for the displacement of each residue; this is applied to all atoms of the residue in the displacement step.
+
+The user must select the energy cutoff for polar bond selection in the rigidity analysis. In general this cutoff should be one at which the protein structure is largely flexible; values around -3.0 or -4.0 kcal/mol are generally appropriate.
+
+The user must choose a step size for the bias displacements, and, by giving this step size a positive or negative sign, choose whether to displace the structure parallel or antiparallel to the mode vector. It should be noted that the sign of a mode vector is arbitrary in normal mode analysis, and therefore there is no physical significance to the choice of sign; in general, motion both parallel and antiparallel to a mode vector must be investigated. The mode vectors themselves are normalised when generated, that is, the sum of squares of all the components of the mode vector is equal to 1. For a typical protein with a number of residues in the hundreds, this means that the largest single component of a mode vector is typically on the order of 0.1 (squaring to ~0.01). A step size of +/-0.1 is thus a reasonable choice; multipling the step size by the bias vector indicates that the actual magnitude of an atomic displacement in the bias step will be on the order of 0.01 Angstroms or smaller.
+
+The pdbMobility utility expects (see USAGE.txt) five arguments: the structure, an energy cutoff, the step, the maximum number of steps to be attempted, and a reporting frequency in steps. A non-default mismatch tolerance can be given as an optional sixth argument. Thus:
+$ pdbMobility prot.pdb -3.0 0.1 1000 100
+will explore the motion of prot.pdb along the direction given by mode.bias, using an energy cutoff of -3.0 kcal/mol for the rigidity analysis and a bias step size of 0.1, calling for up to 1000 steps and saving a "frame" file every 100 steps. 
+
+The output of the utility, in addition to the requested frames from the trajectory, includes a pymol script named loadFrames.pml. This contains commands to load the starting structure and the generated frames into a multi-state Pymol object for easy viewing. The phobic.pml and polar.pml scripts (as generated by pdbRCD) are also part of the output.
+
+Exercise VIIa: Prepare a working directory with copies of the lysozyme structure, its bonds, and its lowest-frequency mode from the previous normal mode analysis, saved as "mode.bias". Carry out a simulation at an energy cutoff of -3.0 kcal/mol with a step size of 0.1, requesting a total of 500 steps and saving every 100th step. Compare your results to the similar simulation in the LysozymeExample/TestMotion directory. (Did your simulation go in the same or the opposite direction?)
+Exercise VIIb: Explore motion in the opposite direction with the same bias vector by changing the sign of the step.
+Exercise VIIc: Choose another normal mode and explore motion using it as a bias.
+
+
+TOPIC VIII: exploring multiple modes, directions and cutoffs.
+
+It should be clear that investigating the flexible motion of a protein structure will in general involve exploring multiple normal mode vector directions; with steps both parallel and antiparallel to each; possibly at multiple different energy cutoffs. Doing so by hand would rapidly become tedious and inefficient.
+
+The loopFLEX.sh shell script in the SCRIPTS folder is written to automate this exploration. It should be run from a directory containing the protein structure, its bond lists, and a subdirectory containing the bias vectors obtained from normal mode analysis.
+
+At the top of the script, variables are defined containing the name of your structure input file, a list of cutoff values, the size of the bias step, the total number of steps to request and the report frequency, the name of the folder containing the normal mode analysis, and the list of normal mode indices to explore. The example values from the version in the SCRIPTS folder are replicated below:
+
+PROT="prot.pdb"
+cutlist="2.0 4.0" # positive values! autoconverted to negative later
+TOTCONF=1000
+FREQ=100
+STEP=0.1 #step magnitude (random and directed)
+TOLERANCE=0.1 #mismatch tolerance
+modedir="Modes" #read modes out of this subdirectory
+modelist="07 08 09 10 11 12 13 14 15 16"
+
+The user should place a copy of this script in a working directory for their protein and edit the values of the above variables in the working copy to suit their requirements.
+
+When the script is invoked:
+$ bash loopFLEX.sh
+it will automatically loop over the requested mode indices, positive and negative signs for the bias step, and the requested cutoff values, running pdbMobility with appropriate arguments for each case. The results are placed in a directory named Runs, in which are subdirectories labelled by the mode index, bias sign, and cutoff. Thus the directory Runs/Mode07-neg-Cut3.0 contains the exploration in which mode07.bias was used as the mode.bias file, the step was given a negative sign, and a cutoff of -3.0 kcal/mol was used for the rigidity analysis.
+
+Exercise VIIIa: In an appropriate working location, place a working copy of loopFLEX.sh and edit it to explore the mobility of your lysozyme structure at cutoffs of -3.0 and -4.0 kcal/mol, requesting up to 500 steps with a report frequency of 100 steps and a step size of 0.1, for each of the te lowest-frequency nontrivial modes found from the normal mode analysis. Run the script (it will take several minutes to explore all of the requested motions) and confirm that your results have been generated in the expected location. Compare to the contents of the LysozymeExample/Runs directory, and compare your script to the version in LysozymeExample.
+
+It is frequently convenient to visualise the trajectories generated for both positive and negative bias signs as a single trajectory. The unifyFlexMode.sh script found in the SCRIPTS folder is intended to help with this process. Running this script in the Runs/ folder, and providing a mode index and a cutoff value as arguments, will search the "-neg-" and "-pos-" folders corresponding to that mode and cutoffs and generate a Pymol script named for the protein, the index and the cutoff. This script loads the frames from the "-neg-" folder in reverse order, the starting structure, and the frames from the "-pos-" folder in order, into a single multi-state Pymol object.
+
+Exercise VIIIb: Choose a mode index and cutoff from among those you explored in the previous exercise, and use the unifyFlexMode script to generate a Pymol script to visualise them. Compare to the LysozymeExamples/Runs folder, where the script has been run for mode index 07 and cutoff -3.0 using this command:
+$ bash unifyFlexMode.sh 07 3.0
+to generate the lyso-07-3.0.pml script.
+
+Exercise VIIIc (advanced): In the investigations of the lysozyme example structure, you will probably have noticed a couple of noncovalent interactions which limit the mobility of the structure: a polar interaction between residues GLU 22 and ARG 137 (a salt bridge), and a phobic tether between residues THR 21 and THR 142. These interactions are highly solvent-exposed and might not be expected to persist in vivo. In an appropriate working directory, prepare edited versions of the bond listings in which these interactions are omitted. You will need to identify the atoms involved in a viewer and then find their serial numbers in the colon-delimited section of the .bonds files. Explore the mobility of the structure in the absence of these constraints.
+
+
+Complete, your training is, young Jedi; already know you, what you need.
+
+Exercise IX: Choose a protein structure of your choice. Clean and hydrogenate it. Generate bond lists for it. Examine its rigidity at multiple cutoffs. Is your attention drawn to anything unexpected? Obtain some normal modes for the structure. Contemplate them for a while. Explore flexible motion of the all-atom structure in some interesting directions. Compare and relate your results to the structural biology of the protein, other crystal structures, NMR structures, MD trajectories, and/or a dream you once had. Publish your results in a peer-reviewed journal.
+

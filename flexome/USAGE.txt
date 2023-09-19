@@ -1,0 +1,98 @@
+Running ./pdb2burial
+   First argument: name of a PDB file to analyse.
+   Optional second argument: probe radius, default 1.4.
+
+   Writes <filename>_burial.pdb
+      in which the occupancy column contains burial depth
+      Hydrogens are ignored.
+      Surface-exposed atoms have burial distance 0.01.
+
+Running ./pdb2bonds
+   First argument: name of a PDB file to analyse.
+   Optional second argument: polar energy cutoff.
+      Cutoff in kcal/mol, default -0.1.
+
+   Writes <filename>.map, mapping PDB serials to internal indices.
+          cov.bonds, listing covalent bonds.
+          polar.bonds, listing hydrogen bonds and salt bridges.
+          phobic.bonds, listing hydrophobic tethers.
+
+Running ./pdb2nodes
+   Single argument: name of a PDB file to analyse.
+   Will identify one node per residue for elastic network.
+   Standard residues use CA position.
+   Het groups report geometric centre of residue.
+   All nodes written as ATOM...CA entries.
+   Writes output file nodes.pdb
+
+Running ./nodes2modes
+   First argument: number of nontrivial modes to generate.
+   Reads from nodes.pdb
+   Reports elastic network matrix as net.sdijf
+   Reports eigenpairs as net.eigenfacs
+
+   Optional second argument: interaction range in Angstroms.
+      (default value: 10.0)
+   Optional third argument: intersite spring constant.
+      (default value: 1.0)
+   Optional fourth argument: onsite spring constant.
+      (default value: 1.0E-10)
+
+Running ./splitModes
+   Requires node positions in nodes.pdb
+   and mode vectors in net.eigenfacs.
+
+Running ./pdbRCD
+   First argument: name of a PDB file to analyse.
+   Optional second argument: polar energy cutoff.
+      Cutoff in kcal/mol, default -0.1.
+
+   Also requires the MATCHING constraint files:
+      cov.bonds, polar.bonds, phobic.bonds.
+
+SCRIPTING: the loopRCD.sh script uses pdbRCD.
+   Run this script using the name of your protein as argument
+   E.g. "bash loopRCD.sh prot.pdb"
+   The script call pdbRCD using a series of energy cutoffs
+   Cutoff list is defined at the head of the script as "cutlist"
+
+Running ./pdbMobility
+Expects at least FIVE arguments.
+   First argument: the name of a PDB file.
+   Second argument: an energy cutoff.
+   Third argument: a directed step size.
+   Fourth argument: total steps, e.g. 1000
+   Fifth argument: report every N steps, e.g. 100
+   OPTIONAL sixth argument: mismatch tolerance (defaults to 0.1)
+
+   Energy cutoff is used to eliminate weak polar interactions.
+   Please give a value in kcal/mol between 0 and -10.
+   Step size is used for perturbations.
+   Please give a value in Angstroms of order 0.1.
+   Sign determines parallel/antiparallel bias.
+   Mismatch tolerance, in Angstroms, of order 0.1.
+
+   Also expects the following constraint files,
+   which must match the PDB file:
+   covalent bonding in cov.bonds, 
+   polar interactions in polar.bonds,
+   and phobic tethers in phobic.bonds.
+
+   And a bias directions file mode.bias.
+   containing a bias direction for each residue.
+
+   Output: a "frame" at every N steps, with numerical suffix.
+
+SCRIPTING: the loopFLEX.sh script uses pdbMobility.
+  Arguments for pdbMobility are defined at the head of the script.
+  These include a list of energy cutoffs and a list of modes .
+  The script creates a folder for each cutoff, mode and direction.
+  pdbMobility is run in each folder to generate frames.
+
+
+Usage: ./staticExpert configFilename
+   Will read commands from config file.
+
+Usage: ./mobileExpert configFilename
+   Will read commands from config file.
+

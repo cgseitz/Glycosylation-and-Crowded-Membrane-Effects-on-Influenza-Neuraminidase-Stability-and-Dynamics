@@ -1,0 +1,4 @@
+parm step3_input.parm7
+trajin prod_100ns_s2.nc
+gist gridspacn 0.5 gridcntr 74.058 74.115 74.061 griddim 50 50 50
+go

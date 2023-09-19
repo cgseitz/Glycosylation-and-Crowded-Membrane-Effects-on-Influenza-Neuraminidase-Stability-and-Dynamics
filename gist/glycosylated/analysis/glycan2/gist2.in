@@ -1,0 +1,6 @@
+parm step3_input.parm7
+trajin prod_100ns.nc 1 last 10
+strip @CLA
+strip @SOD
+gist gridspacn 0.5 gridcntr 46.539 100.202 125.108 griddim 125 92 112
+go

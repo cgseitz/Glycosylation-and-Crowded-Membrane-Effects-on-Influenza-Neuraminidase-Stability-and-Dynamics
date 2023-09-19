@@ -1,0 +1,13 @@
+1) I concatenated the glycosylated and unglycosylated replicates so I just had one very long glycosylated trajectory and one very long unglycosylated one for my clustering
+these trajectories are aligned to all alpha carbons
+
+2) ran clustering with alpha carbons as the input and the whole system as the output
+gmx cluster -f glycosylated.trr -s subset.pdb -g clustering.log -dist clusteringdistance.xvg -sz clusteringsize.xvg -cl finalclusters.pdb -cutoff 0.2 -method gromos
+
+note that 0.2 is 0.2 nm, or 2 angstroms
+
+I will start with increments of 0.2, and if I want to add more and reduce it to 0.1 later I can
+
+if this takes too long I will stride them. I started the first one on 4/4/23. If I stride them, I should do it in a way that I can also incorporate the virion trajectories.
+Actually I can do all the calculations on all three and then normalize the single protein ones to fit the virion ones, that way I'd be including more data in the calculations
+I should do a bunch of tests with the virion one to find out what are good values to be running with the cutoff. Perhaps 0.2 is way too low and I should be starting with 1 or something like that and going further

@@ -1,0 +1,9 @@
+#load the trajectory file
+
+#rmsf with alpha carbon alignment
+trajin /net/gpfs-amarolab/cseitz/from_jam/projects/influenza/neuraminidase/md/2009/no_glycosylation/replicate1/no_lipids/alignmentacarbons.dcd
+
+#set reference frame
+parm /net/gpfs-amarolab/cseitz/from_jam/projects/influenza/neuraminidase/md/2009/no_glycosylation/replicate1/no_lipids/subset.pdb
+
+surf out surf.dat

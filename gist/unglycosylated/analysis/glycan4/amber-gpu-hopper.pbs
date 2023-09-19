@@ -1,0 +1,54 @@
+#!/bin/bash
+#
+# rok Last modified: 2021-02-19 14:20:20
+#
+#PBS -A amaro-hopper
+#PBS -q home-hopper
+#PBS -l nodes=1:ppn=4:gpu3090
+#PBS -l walltime=240:00:00
+#PBS -N gistu4
+#PBS -o pbs-${PBS_JOBID}.out
+#PBS -e pbs-${PBS_JOBID}.err
+#PBS -V
+#
+
+set -xv
+
+# function to copy files back from /scratch to initial directory
+copy_back() {
+    rsync -av $TMPDIR $PBS_O_WORKDIR/
+}    
+
+# create a bash function which will do the cleanup (file copying) if the 
+# job is killed due to exceeding the wallclock
+exit_cleanup() {
+    echo "This job was killed by PBS on" `date`
+    echo "Copying files back after job cancellation ..."
+    while true ; do
+        sleep 5
+        echo "Trying rsync ... "
+        copy_back
+        if [ $? -eq 0 ] ; then break ; fi
+    done
+    echo "Finished cleanup on" `date`
+    exit 0
+}
+
+# catch SIGTERM and do clean up
+trap exit_cleanup SIGTERM
+
+echo "Started on" `date`
+
+# copy input files from current dir ($PBS_O_WORKDIR) to /scratch ($TMPDIR)
+rsync -av $PBS_O_WORKDIR/* $TMPDIR/
+
+cd $TMPDIR
+
+echo "Using $PBS_NUM_PPN CPU cores."
+source /home/ux453813/pkg/amber20/amber-cuda.sh
+
+$AMBERHOME/bin/cpptraj.cuda -i gist4.in
+
+echo "Finished on" `date`
+echo "Copying files back after job's normal termination ..."
+copy_back

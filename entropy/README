@@ -1,0 +1,63 @@
+packman
+
+1) the packman program used the starting NA structure for the simulations, both the glycosylated and unglycosylated structures. Thus I used two structures total.
+
+2) I needed to add the elements to the last column of my pdb files so that packman could understand it. I did it by doing this:
+paste subset.pdb <(awk '{print $3}' subset.pdb) > test.pdb
+
+3) I then went into the visual mode of vi and deleted the extra atom information, since 2) copied the atom naming (i.e. NH2) but we only want the element
+
+4) this leaves a tab between the elements and the rest of the file but we need spaces. I can exchange this through vi as well
+
+5) uploaded the glycosylated and unglycosylated constructs to the packman server
+
+6) I can now compare entropies between the glycosylated and unglycosylated constructs. These are relative values, nto absolute values, so they can only be used for comparison. I can compare the overall entropies with the entropies of the N-linked sequons.
+
+pdb2entropy
+
+1) git clone https://github.com/federico-fogolari/pdb2entropy.git
+
+2) cc pdb2entropy.c -o pdb2entropy -lm -fopenmp
+
+3) need to convert the trajectories to pdb trajectories, then I can run pdb2entropy
+
+4) ./pdb2entropy traj.pdb tors_next_def.dat entropy.out -c 8.0 -mi -kmi 2 -nt 0 -s 1000 -v
+where tors_next_def.dat is a file given with the program, traj.pdb is the pdb trajectory I just created above, entropy.out is the output file, -c is the cutoff distance in angstroms for calculating entropy (I can use 6 or 8), -mi says to use MIST (which I think I want), -kmi is the torsions with n number of neighbors (they suggest 1 or preferably 2), -nt is the number of threads, where 0 = all threads, and -s is the stride, so s=100 means take every hundredth frame, and -v is verbose
+
+here I am using a stride of 1000, but once I figure out how fast it will take I can hopefully use less of a stride, or no stride at all
+
+I should then be able to look at the output files and either consider entropy over the entire protein, or over certain regions (perhaps just the sequons, or concentric shells coming out of the sequons) if I am interested
+
+this takes over a day for four frames, that is not feasible and I need to reduce the input data I give to pdb2entropy. I asked on github, am waiting for a response
+
+x-entropy 
+
+1) git clone https://github.com/liedllab/X-Entropy.git
+
+2) conda activate fastai (just an old environment that I can mess around with)
+
+3) conda install -c /net/gpfs-amarolab/cseitz/from_jam/projects/influenza/neuraminidase/md/2009/analysis_entropy/xentropy/X-Entropy/conda xentropy
+
+4) I extracted the dihedral angles of the trajectories in one jupyter notebook, and then concatenated those according to system in a separate jupyter notebook
+
+5) put these angles through my entropyshell.py
+
+mcc
+
+1) git clone https://github.com/arghya90/CodeEntropy.git
+
+2) tar -zxvf CodeEntropy-0.3.tar.gz
+
+I asked the PCF people to install this on 4/4/2023
+
+gmentropy - likely unusable because I can't convert glycans to gromacs force fields
+
+1) downloaded the tar.gz from the Szilagyi lab website, and untarred it
+
+2) I need the backbone torsion angles for this, saved as xvg files. These can be taken from the pdb2entropy whenever those finish, and then I can use gromacs to extract the torsion angles over the course of the trajectories
+
+this needs gromacs stuff which would be a hassle to make. if i want to, the commands are
+gmx mk_angndx -s subset.pdb -n index.ndx -type dihedral
+to make the index file and
+gmx chi -s mymd.tpr -f mymd.xtc -all -maxchi 2 -phi -psi -rama
+or something like that. But for the index file I need a tpr which would require force field work

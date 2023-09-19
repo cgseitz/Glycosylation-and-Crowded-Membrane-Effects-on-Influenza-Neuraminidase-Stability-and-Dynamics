@@ -1,0 +1,96 @@
+1) it does not make sense to do gist on the virion structure as that will be the same as for the glycosylated construct so I discarded that
+
+gist can be run on pdb and dcd files, I would just need to run the appropriate MD first. I could try this instead of remaking new input files for amber...
+
+2) First, I am taking files of only the protein, not solvent or membrane, for the glycosylated and unglycosylated systems.
+
+3) uploaded na_initial_edit.pdb for glycosylated, new_edit.pdb for unglycosylated, which is the input pdb I used previously for charmm gui except I renamed the HSE and HID to HIS and removed the calciums. When uploading to charmm gui this time I did not check the "check PDB format" box
+
+4) model/chain selection option:
+select all
+
+4) PDB manipulation options:
+renaming engineered residues
+BGLN -> BGLCNA
+BMAN -> BMAN
+AMAN -> AMAN
+BGAL -> BGAL
+AFUC -> AFUC
+
+and checked the box to generate the ligand FF using the pdb coordinate
+
+5) waterbox size options
+fit waterbox size to protein size
+waterbox type: rectangular
+enter edge distance: 10 A
+
+add ions:
+include ions
+ion placing method: monte carlo
+
+ions: 0.15 M NaCl
+
+6) generate grid information for PME FFT automatically
+
+7) input generation: amber
+equilibration input: nvt ensemble
+dynamics input: nvt ensemble (this is because gist wants nvt, but i don't think i will use the charmm gui inputs anyways)
+temperature: 298 K (this was the same as the MD simulations)
+
+8) inside the amber input files, I copied the step3_input.parm7 and step3_input.rst7 for use in the gist equilibration and all further steps. I did not do the charmm gui equilibration. The water box appears to be shifted a bit upwards so initially the bottom of the stalk isn't covered by water, but this is just a visualization issue and there is enough water at the top of the protein that the protein tip won't interact with the protein base in the periodic box
+
+9) copied the gist equilibration files from /net/gpfs-amarolab/cseitz/from_jam/projects/hiv/5fro/2_simulation_files/gist/equilibration
+
+10) module load amber/18 #for who knows what reason this keeps failing and giving seg faults in amber/22...grrrrrrrrr
+$AMBERHOME/bin/pmemd -O -i min_sys-1.in -o min1.out -p step3_input.parm7 -c step3_input.rst7 -r min_prot-1.rst7
+
+11) $AMBERHOME/bin/pmemd -O -i min_sys-2.in -o min2.out -p step3_input.parm7 -c min_prot-1.rst7 -r min_prot-2.rst7 -ref min_prot-1.rst7
+
+12) $AMBERHOME/bin/pmemd.cuda -O -i md-heat-50K.in -o heat1.out -p step3_input.parm7 -c min_prot-2.rst7 -r md_heat-50K.rst7 -x heat1.nc -ref min_prot-2.rst7
+
+13) $AMBERHOME/bin/pmemd.cuda -O -i md-heat-300K.in -o heat2.out -p step3_input.parm7 -c md_heat-50K.rst7 -r md_heat-300K.rst7 -x heat2.nc -ref md_heat-50K.rst7
+
+14) $AMBERHOME/bin/pmemd.cuda -O -i md-eq-npt-10ns.in -o equil-npt.out -p step3_input.parm7 -c md_heat-300K.rst7 -r md_eq-npt.rst7 -x equil-npt.nc -ref md_heat-300K.rst7
+
+15) $AMBERHOME/bin/pmemd.cuda -O -i md-eq-nvt-5ns.in -o equil-nvt.out -p step3_input.parm7 -c md_eq-npt.rst7 -r md_eq-nvt.rst7 -x equil-nvt.nc -ref md_eq-npt.rst7
+
+16) $AMBERHOME/bin/pmemd.cuda -O -i md-nvt-100ns.in -o md-nvt-100ns.out -p step3_input.parm7 -c md_eq-nvt.rst7 -r final-prod.rst7 -x prod_100ns.nc -ref md_eq-nvt.rst7
+
+17) Now I need to define the grid region for the calculations. Mike Gilson recommends creating a grid for each glycan. This will be messy as the stalk glycans are very close to each other. The head glycans are discrete and their analysis will be easier. I extracted each glycan and put it into a separate pdb file for grid generation.
+
+18) python FindCentroid.py -i glycan1.pdb 
+and so on for each glycan. I then placed these results into respective gist input files
+
+19) I want to compare the same space in the system without glycans, so I used the same grids except I used the structure and trajectory file for the unglycosylated NA.
+
+20) ran these on hopper. using all frames would take 61 days even with the fast GPUs so I used a stride of 10 (which is called an offset of 10 in cpptraj)
+
+21) copied gistpp for further analysis from /net/gpfs-amarolab/cseitz/from_jam/projects/hiv/6puz/3_analysis/gist/gist-post-processing
+
+22) to calculate some of the thermodynamic properties we have to go through a few different steps
+./../gistpp -i gist-gO.dx -i2 glycan1.pdb -op defbp -opt const 3 -o bp3_glycan1.dx #this defines the volume around the ligand (glycan1.pdb) with the volume being 3 A from the ligand (-opt const 3)
+
+./../gistpp -i bp3_glycan1.dx -i2 gist-dTStrans-dens.dx -op mult -o glycan1_dTStrans.dx #this multiplies the full dTStrans by the ligand space, so we will only get values relevant to the ligand, not far away from it
+./../gistpp -i bp3_glycan1.dx -i2 gist-dTSorient-dens.dx -op mult -o glycan1_dTSorient.dx
+./../gistpp -i bp3_glycan1.dx -i2 gist-Esw-dens.dx -op mult -o glycan1_Esw.dx
+./../gistpp -i bp3_glycan1.dx -i2 gist-Eww-dens.dx -op mult -o glycan1_Eww.dx
+
+./../gistpp -i glycan1_dTSorient.dx -op sum #this gives the numerical value of the orientational entropy. we only want the sum, ignore the average
+./../gistpp -i glycan1_dTStrans.dx -op sum
+./../gistpp -i glycan1_Esw.dx -op sum
+./../gistpp -i glycan1_Eww.dx -op sum
+
+I did the same with the unglycosylated systems, still using the glycan to exclude volume, because I want to make the most direct comparison between solvent spaces
+
+23) To figure out how many waters are in the grid I'm using:
+./../gistpp -i bp3_glycan1.dx -op sum
+
+bp3_glycan8.dx (volume I'm interested in) x average energy/voxel (similar to the sum total I used in my graphs) x bulk water density
+but I need the volume as a single number, not as the literal volume
+
+./../gistpp -i bp3_glycan1.dx -op sum #the sum here gets us the volume in the area we are interested in
+./../gistpp -i glycan1_Esw.dx -op sum #the average here gets us the average energy/voxel
+bulk water density is 0.033 waters/cubic angstrom
+
+24) to get the entropy per water, do the same as above except do
+./../gistpp -i glycan1_dTStrans.dx -op sum

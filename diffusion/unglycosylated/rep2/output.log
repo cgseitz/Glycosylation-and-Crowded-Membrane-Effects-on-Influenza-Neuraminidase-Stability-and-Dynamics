@@ -1,0 +1,96 @@
+
+CPPTRAJ: Trajectory Analysis. V4.25.6
+    ___  ___  ___  ___
+     | \/ | \/ | \/ | 
+    _|_/\_|_/\_|_/\_|_
+
+| Date/time: 09/15/22 11:00:01
+| Available memory: 4.031 GB
+
+	Reading 'step5_charmm2namd_reorder.parm7' as Amber Topology
+Warning:   Either residue information is incorrect or molecule determination was inaccurate.
+Warning:   Basing residue information on molecules.
+Warning:   Old # residues= 106773, new # residues = 139038
+INPUT: Reading input from 'diffusion.in'
+  [trajin reorder.dcd]
+	Reading 'reorder.dcd' as Charmm DCD
+	Version >= 22; assuming shape matrix is stored.
+  [parm step5_charmm2namd_reorder.parm7]
+Warning: Topology 'step5_charmm2namd_reorder.parm7' already present.
+Warning:   To load the same topology file multiple times use tags,
+Warning:   e.g. `parm <file> [tag]`.
+  [diffusion :TIP@OH2 out WAT_O.agr WAT_O diffout DC.dat]
+    DIFFUSION:
+	Atom Mask is [:TIP@OH2]
+	Only average diffusion will be calculated.
+	Data set base name: WAT_O
+	Corrections for imaging enabled.
+	Output files:
+	  WAT_O.agr: (x) Mean square displacement(s) in the X direction (in Ang.^2).
+	  WAT_O.agr: (y) Mean square displacement(s) in the Y direction (in Ang.^2).
+	  WAT_O.agr: (z) Mean square displacement(s) in the Z direction (in Ang.^2).
+	  WAT_O.agr: (r) Overall mean square displacement(s) (in Ang.^2).
+	  WAT_O.agr: (a) Total distance travelled (in Ang.).
+	The time between frames is 1 ps.
+	Calculating diffusion constants by fitting slope to MSD vs time
+	  and multiplying by 10.0/2*N (where N is # of dimensions), units
+	  are 1x10^-5 cm^2/s.
+	Diffusion constant output to 'DC.dat'
+---------- RUN BEGIN -------------------------------------------------
+
+PARAMETER FILES (1 total):
+ 0: step5_charmm2namd_reorder.parm7, 524812 atoms, 139038 res, box: Orthogonal, 137166 mol
+
+INPUT TRAJECTORIES (1 total):
+ 0: 'reorder.dcd' is a CHARMM DCD file (coords) Little Endian 32 bit, Parm step5_charmm2namd_reorder.parm7 (Orthogonal box) (reading 50012 of 50012)
+  Coordinate processing will occur on 50012 frames.
+
+BEGIN TRAJECTORY PROCESSING:
+.....................................................
+ACTION SETUP FOR PARM 'step5_charmm2namd_reorder.parm7' (1 actions):
+  0: [diffusion :TIP@OH2 out WAT_O.agr WAT_O diffout DC.dat]
+	Mask [:TIP@OH2] corresponds to 134604 atoms.
+	Imaging enabled.
+----- reorder.dcd (1-50012, 1) -----
+ 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% Complete.
+
+Read 50012 frames and processed 50012 frames.
+TIME: Avg. throughput= 15.5399 frames / second.
+
+ACTION OUTPUT:
+    DIFFUSION: Calculating diffusion constants from slopes.
+TIME: Analyses took 0.0000 seconds.
+
+DATASETS (10 total):
+	WAT_O[X] "WAT_O[X]" (double), size is 50012 (400.096 kB)
+	WAT_O[Y] "WAT_O[Y]" (double), size is 50012 (400.096 kB)
+	WAT_O[Z] "WAT_O[Z]" (double), size is 50012 (400.096 kB)
+	WAT_O[R] "WAT_O[R]" (double), size is 50012 (400.096 kB)
+	WAT_O[A] "WAT_O[A]" (double), size is 50012 (400.096 kB)
+	WAT_O[D] "WAT_O[D]" (double), size is 4 (0.032 kB)
+	WAT_O[Label] "WAT_O[Label]" (string), size is 4 (0.044 kB)
+	WAT_O[Slope] "WAT_O[Slope]" (double), size is 4 (0.032 kB)
+	WAT_O[Intercept] "WAT_O[Intercept]" (double), size is 4 (0.032 kB)
+	WAT_O[Corr] "WAT_O[Corr]" (double), size is 4 (0.032 kB)
+    Total data set memory usage is at least 2.001 MB
+
+DATAFILES (2 total):
+  DC.dat (Standard Data File):  WAT_O[D] WAT_O[Slope] WAT_O[Intercept] WAT_O[Corr] WAT_O[Label]
+  WAT_O.agr (Grace File):  WAT_O[R] WAT_O[X] WAT_O[Y] WAT_O[Z] WAT_O[A]
+
+RUN TIMING:
+TIME:		Init               : 0.0000 s (  0.00%)
+TIME:		Trajectory Process : 3218.2966 s ( 99.99%)
+TIME:		Action Post        : 0.0060 s (  0.00%)
+TIME:		Analysis           : 0.0000 s (  0.00%)
+TIME:		Data File Write    : 0.4147 s (  0.01%)
+TIME:		Other              : 0.0015 s (  0.00%)
+TIME:	Run Total 3218.7189 s
+---------- RUN END ---------------------------------------------------
+TIME: Total execution time: 3220.3860 seconds.
+--------------------------------------------------------------------------------
+To cite CPPTRAJ use:
+Daniel R. Roe and Thomas E. Cheatham, III, "PTRAJ and CPPTRAJ: Software for
+  Processing and Analysis of Molecular Dynamics Trajectory Data". J. Chem.
+  Theory Comput., 2013, 9 (7), pp 3084-3095.
+

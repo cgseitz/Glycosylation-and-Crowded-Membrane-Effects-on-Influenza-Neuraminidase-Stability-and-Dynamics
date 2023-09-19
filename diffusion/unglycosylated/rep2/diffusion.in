@@ -1,0 +1,8 @@
+#load the trajectory file
+
+trajin reorder.dcd
+
+#set reference frame
+parm step5_charmm2namd_reorder.parm7
+
+diffusion :TIP@OH2 out WAT_O.agr WAT_O diffout DC.dat

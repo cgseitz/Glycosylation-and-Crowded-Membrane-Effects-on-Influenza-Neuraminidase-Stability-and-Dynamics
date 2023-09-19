@@ -1,0 +1,101 @@
+
+CPPTRAJ: Trajectory Analysis. V6.4.4 (AmberTools)
+    ___  ___  ___  ___
+     | \/ | \/ | \/ | 
+    _|_/\_|_/\_|_/\_|_
+
+| Date/time: 07/28/23 21:13:20
+| Available memory: 242.634 GB
+
+	Reading '/net/gpfs-amarolab/cseitz/from_jam/projects/influenza/neuraminidase/md/2009/partial_glycosylation/trajectories/replicate1/no_lipids/subset.pdb' as PDB File
+	Reading bond info from CONECT records.
+	Not reading bond info from LINK records.
+	Determining bond info from distances.
+Warning: Determining bond length parameters from element types for 'subset.pdb'.
+Warning: 3 molecules have non-contiguous segments of atoms.
+	       4        2 segments: 370-375 (6)  387-7081 (6695) 
+	       7        2 segments: 14160-14518 (359)  14529-21240 (6712) 
+	       8        2 segments: 14519-14520 (2)  14525-14528 (4) 
+Warning: The 'fixatomorder' command can be used to reorder the topology and any
+Warning:  associated coordinates.
+INPUT: Reading input from 'sasa.in'
+  [trajin /net/gpfs-amarolab/cseitz/from_jam/projects/influenza/neuraminidase/md/2009/partial_glycosylation/trajectories/replicate2/no_lipids/alignmentacarbons.dcd]
+	Reading '/net/gpfs-amarolab/cseitz/from_jam/projects/influenza/neuraminidase/md/2009/partial_glycosylation/trajectories/replicate2/no_lipids/alignmentacarbons.dcd' as Charmm DCD
+	Version >= 22; assuming shape matrix is stored.
+Warning: Trajectory box type is 'Tetragonal' but topology box type is 'None'.
+Warning: Setting topology box information from trajectory.
+  [parm /net/gpfs-amarolab/cseitz/from_jam/projects/influenza/neuraminidase/md/2009/partial_glycosylation/trajectories/replicate1/no_lipids/subset.pdb]
+Warning: Topology 'subset.pdb' already present.
+Warning:   To load the same topology file multiple times use tags,
+Warning:   e.g. `parm <file> [tag]`.
+  [surf out surf.dat]
+    SURF: Calculating LCPO surface area for all solute atoms.
+	Solute will be all molecules not marked as solvent with size > 1 atom.
+	van der Waals offset is 1.4 Ang.
+	Cutoff for determining whether atoms have neighbors is 2.5 Ang.
+	Output to 'surf.dat'
+#Citation: Weiser, J.; Shenkin, P. S.; Still, W. C.; "Approximate atomic
+#          surfaces from linear combinations of pairwise overlaps (LCPO)."
+#          J. Comp. Chem. (1999), V.20, pp.217-230.
+---------- RUN BEGIN -------------------------------------------------
+
+PARAMETER FILES (1 total):
+ 0: subset.pdb, 30101 atoms, 1949 res, box: Tetragonal, 39 mol
+
+INPUT TRAJECTORIES (1 total):
+ 0: 'alignmentacarbons.dcd' is a CHARMM DCD file (coords) Little Endian 32 bit, Parm subset.pdb (Tetragonal box) (reading 44099 of 44099)
+  Coordinate processing will occur on 44099 frames.
+
+BEGIN TRAJECTORY PROCESSING:
+.....................................................
+ACTION SETUP FOR PARM 'subset.pdb' (1 actions):
+  0: [surf out surf.dat]
+	Considering only non-solvent molecules with size > 1 as solute.
+	30101 solute atoms. Calculating LCPO surface area for 30101 atoms.
+Warning: Unusual number of bonds for atom 355 (1), type .
+Using default atom parameters.
+Warning: Unusual number of bonds for atom 357 (0), type .
+Using default atom parameters.
+Warning: Unusual number of bonds for atom 376 (1), type .
+Using default atom parameters.
+Warning: Unusual number of bonds for atom 14516 (1), type .
+Using default atom parameters.
+Warning: Unusual number of bonds for atom 14519 (1), type .
+Using default atom parameters.
+Warning: Unusual number of bonds for atom 14521 (0), type .
+Using default atom parameters.
+	15419 atoms with neighbors.
+	Calculating SA for 15419 atoms with neighbors.
+	Contribution from atoms with no neighbors is 0
+----- alignmentacarbons.dcd (1-44099, 1) -----
+ 0% 10% 20% 30% 40% 50% 60% 70% 80% 90% 100% Complete.
+
+Read 44099 frames and processed 44099 frames.
+TIME: Avg. throughput= 0.3390 frames / second.
+
+ACTION OUTPUT:
+TIME: Analyses took 0.0000 seconds.
+
+DATASETS (1 total):
+	SA_00001 "SA_00001" (double), size is 44099 (352.792 kB)
+    Total data set memory usage is at least 352.792 kB
+
+DATAFILES (1 total):
+  surf.dat (Standard Data File):  SA_00001
+
+RUN TIMING:
+TIME:		Init               : 0.0000 s (  0.00%)
+TIME:		Trajectory Process : 130086.3394 s (100.00%)
+TIME:		Action Post        : 0.0000 s (  0.00%)
+TIME:		Analysis           : 0.0000 s (  0.00%)
+TIME:		Data File Write    : 0.0640 s (  0.00%)
+TIME:		Other              : 0.0001 s (  0.00%)
+TIME:	Run Total 130086.4035 s
+---------- RUN END ---------------------------------------------------
+TIME: Total execution time: 130086.5097 seconds.
+--------------------------------------------------------------------------------
+To cite CPPTRAJ use:
+Daniel R. Roe and Thomas E. Cheatham, III, "PTRAJ and CPPTRAJ: Software for
+  Processing and Analysis of Molecular Dynamics Trajectory Data". J. Chem.
+  Theory Comput., 2013, 9 (7), pp 3084-3095.
+

@@ -1,0 +1,5 @@
+1) this section contains info on the RMSD, RMSF and head tilting work
+
+2) the three directories contain the input pdbs, psfs and dcds used after solvent and lipids were removed
+
+3) the trajectory files are too big to host on Github, but can be provided upon request. They are prepared and placed in a special folder if anyone needs them!

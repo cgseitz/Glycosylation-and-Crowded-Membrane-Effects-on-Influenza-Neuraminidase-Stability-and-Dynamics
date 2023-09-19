@@ -1,0 +1,5 @@
+1) gave up on mdtraj so I am using cpptraj
+
+2) created a simple script to use the surf SASA implementations in cpptraj
+
+3) found the average SASA for each run by doing awk '{total += $2 } END { print total/NR }' surf.dat

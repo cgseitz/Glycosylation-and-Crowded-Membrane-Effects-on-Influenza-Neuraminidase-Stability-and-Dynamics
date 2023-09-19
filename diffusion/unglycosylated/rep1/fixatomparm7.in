@@ -1,0 +1,6 @@
+parm step5_charmm2namd.pdb
+trajin fulltrajwithwaterrep1.dcd
+fixatomorder outprefix reorder 
+trajout reorder.dcd
+go
+

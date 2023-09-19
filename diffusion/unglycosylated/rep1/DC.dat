@@ -1,0 +1,5 @@
+#Set         WAT_O[D] WAT_O[Slope] WAT_O[Intercept]  WAT_O[Corr] WAT_O[Label]
+       1      26.5930      15.9558        7755.2524       1.0000  WAT_O_AvgDr
+       2      39.5416       7.9083        1248.1209       1.0000  WAT_O_AvgDx
+       3      40.1479       8.0296         648.0168       1.0000  WAT_O_AvgDy
+       4       0.0895       0.0179        5859.1147       0.4123  WAT_O_AvgDz

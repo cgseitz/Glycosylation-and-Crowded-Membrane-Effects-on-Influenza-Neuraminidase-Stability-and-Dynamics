@@ -1,0 +1,22 @@
+1) found my computing architecture with
+uname -m
+
+2) downloaded the x86_64 version of pcasuite and unzipped
+
+3) created a softlink for the complier
+ln -s config.gcc3 config.mk
+
+4) copied in the structure and trajectory files for the glycosylated and unglycosylated constructs, and the virion trajectory
+
+5) saved the structure and dcd as alpha carbons only through VMD because the pcasuite developers said more atoms were unnecessary, and pcasuite doesn't have the memory to diagonalize the covariance matrix for this large of a protein
+
+6) converted the dcd to nc files
+mdconvert -o traj.nc -t subset.pdb alignmentacarbons.dcd 
+
+7) ./../pcazip -i traj.nc -p subset.pdb -o traj.pcz
+
+8) ./../pczdump -i acarbons.pcz --lindemann --mask "@CA"
+this selects only alpha carbons; however I only have alpha carbons in my trajectory so it doesn't matter - I'm just doing it for clarity
+
+9) ./../pczdump -i acarbons.pcz --forcecte 298
+these are the force constants for the simulation at 298 K --mask "@CA"

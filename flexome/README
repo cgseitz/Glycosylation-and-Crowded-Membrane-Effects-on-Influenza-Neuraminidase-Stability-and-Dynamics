@@ -6,7 +6,10 @@ to compile stuff
 
 3) open the protein pdb in pymol and save it out, this will reformat it so that it can be read by the subsequent scripts
 
-4) I will test the protein rigidity over several energy cutoffs. The idea here is that if more residues survive over higher cutoffs in one system vs the other, then the system with more surviving residues must have stronger bonds between each other and thus must be more rigid. 
+4) I need to create some files for each pdb that will be used later. I can make them like this:
+./../../../ForDistribution23112020/CPP/pdb2bonds grep1_0ns_pymol.pdb
+
+5) I will test the protein rigidity over several energy cutoffs. The idea here is that if more residues survive over higher cutoffs in one system vs the other, then the system with more surviving residues must have stronger bonds between each other and thus must be more rigid. 
 
 easiest to do this with the loopRCD.sh. I copied that into my working directory, and on line 24 adjusted the path of pdbRCD so that it could find the executable. Specifically, I changed it to this: ./../ForDistribution23112020/CPP/pdbRCD
 

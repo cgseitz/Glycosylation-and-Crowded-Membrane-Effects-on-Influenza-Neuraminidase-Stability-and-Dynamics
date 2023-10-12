@@ -1,0 +1,131 @@
+This a development version of the software. It is intended to work, but testing
+is limited.
+
+REQUIREMENTS
+------------
+LAPACK and BLAS libraries are needed in order to compile the code.
+GCC, xlC or Intel C compilers.
+
+COMPILATION
+-----------
+It has been compiled with different versions of GCC, XLC and ICC.
+I provide the different configurations used with each one, called
+  -config.gcc3
+  -config.gcc4
+  -config.xlc
+  -config.intel
+You must choose the one that best suits your needs and create a soft link
+called config.mk pointong to the appropiate one:
+  $ ln -s config.gcc3 config.mk
+
+Basic compiling procedure follows:
+  $ make clean
+  $ make
+This sequence cleans the folder from old files and compiles the applications.
+Main programs are pcazip, pcaunzip and pczdump.
+
+OVERVIEW
+--------
+PCAzip compresses a trajectory, recentering the snapshots using a standard RMS
+or a gaussian version.
+PCAunzip recreates the original trajectory from the projection data.
+PCZdump analyzes the compressed trajectory and gives coefficients and values
+computed from the stored trajectory.
+All the programs show a help text when using the --help parameter.
+
+The formats accepted for the programs are the PCZ2, PCZ3 and the new PCZ4.
+A Fortran source code is included with routines to read the new PCZ4 format. It
+can be executed with ./readpcz file.pcz [-|outfile]
+
+PCAZIP
+------
+PCAzip is the trajectory compressor module. The quick way to get started is
+  $ pcazip -i trajectory_file -o compressed_file -p pdb_file
+This command reads the trajectory stored in trajectory_file, assigns the names
+found in the pdb_file to the corresponding atoms in the trajectory and
+compresses the data in the compressed_file.
+
+Argument listing:
+-i Specifies the name of the file containing the trajectory in an Amber-like
+   format
+-o Specifies the name of the file that will store the compressed trajectory
+-p Specifies the name of a PDB-like file containing the names for the atoms in
+   the input trajectory
+-n Specifies how many atoms the trajectory has. It can be used when no PDB file
+   can be specified, but the functionalities that depends on the atoms and
+   residue names will be disabled.
+-m Specifies the name of a PDB-like file containing the atoms that should be
+   taken into account when compressing the trajectory. Only this atoms will be
+   used in the compression process and only this atoms will be in the output
+   file.
+-M Specifies a mask string for the selection of the atoms. It serves the same
+   purpose than the -m switch, but in works in a descriptive way. The mask has
+   the same form as the Amber/ptraj masks.
+-e Specifies the number of eigenvectors that must be stored in the file
+-q Specifies the quality of the compression as a percentage value. It represents
+   the percentage of the total variance that must be explained by the stored
+   eigenvalues.
+-g If specified, the protein recentering is performed with a gaussian version of
+   the RMSd algorithm. If not specified, a standard RMSd algorithm is used.
+-v Makes the program more verbose, giving more information about its progress.
+-h Displays a short help for the user.
+
+PCAUNZIP
+--------
+PCAunzip is the trajectory decompressor module. It is simpler than the
+trajectory compressor module. In this case, the quick way to run is:
+  $ pcaunzip -i compressed_file -o trajectory_file
+This command reads the compressed_file and generates an uncompressed trajectory
+in an Amber-like format.
+
+Argument listing:
+-i Specifies the name of the file containing the compressed trajectory
+-o Specifies the name of the file that will store the uncompressed trajectory in
+   an Amber-like format
+--pdb If this flag is present, the output format is PDB. It is needed that the
+   compression was made giving a PDB in the compression process.
+-v Makes the program more verbose, giving more information about its progress.
+-h Displays a short help for the user.
+
+PCZDUMP
+-------
+PCZdump is the PCZ file analysis and query tool. Its purpose is to extract information about the compressed trajectory without having to uncompress it.
+The basic usage mode is giving a compressed file as input and a query flag:
+  $ pczdump -i compressed_file --info
+This command returns the basic information of the compressed trajectory like number of atoms, the number of eigenvectors stored in the file, the variance of the trajectory...
+
+Argument listing:
+-i Specifies the name of the file containing the compressed trajectory
+-o Specifies the name of the file that will store the results of the query
+--info Returns values related to the stored trajectory: title, number of atoms,
+   eigenvectors and frames, total and explained variance, percentual quality of
+   the compression, dimensionality, RMSd type used in the compression and a flag
+   indicating if atom names are available.
+--avg Returns the average structure stored in the compressed file.
+--evals Returns the eigenvalues for the stored eigenvectors.
+--evec Returns the requested eigenvalue amongst the list of eigenvectors stored
+   in the compressed file.
+--proj Returns all the projections for the requested eigenvector.
+--rms Computes the RMSd between the given frame and all the others.
+--fluc Computes the atomic fluctuations for the trajectory.
+--bfactor If this flag is present, the values of atomic fluctuation are given as
+   B-factor values.
+--anim Animates the system along the requested eigenvector.
+--lindemann Computes the liquidity/solidity Lindemann coefficient
+--collectivity Computes a collectivity index of movement for the requested
+   eigenvector.
+--forcecte Computes the foce constants given a simulation temperature
+--hinge Computes hinge points predictions.
+--mask Specifies an Amber/ptraj-like mask to apply to the analysis requested.
+--pdb If this flag is present, the results are returned in PDB format, whenever
+   possible.
+-v Makes the program more verbose, giving more information about its progress.
+-h Displays a short help for the user.
+
+EXAMPLES
+--------
+In the examples folder, a small trajectory can be found, with shell scripts
+that show how to run the compression programs. The original trajectory is named
+1b9p.x and the associated PDB file is 1b9p.pdb. 1b9p.top is an Amber topology
+file that has been used to generate the PDB file.
+
